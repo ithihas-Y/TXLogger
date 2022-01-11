@@ -1,9 +1,9 @@
-import Web3 from 'web3';
 import {ethers} from 'ethers'
 import fetch from 'node-fetch'
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 require('dotenv').config()
+
 
 const IERC = require("./IERC20.json");
 
@@ -14,8 +14,7 @@ let methods = ['0x095ea7b3','0xa9059cbb']
 
 let swapMethods=['0x18cbafe5','0xb6f9de95','0x791ac947','0x8803dbee']
 
-const web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed.binance.org/')); // your web3 provider
-
+const provider = new ethers.providers.JsonRpcProvider('https://bsc-dataseed.binance.org/')
 
 
 const x =()=> fetch(`https://api.bscscan.com/api?module=account&action=txlist&address=${account}&startblock=0&endblock=999999999&apikey=${process.env.API_KEY}`).
@@ -27,7 +26,7 @@ then(x=>x.json().then(
                 console.log('transaction ' + i.hash + ' has failed' )
             }else {
                 if(i.input == '0x'){
-                    console.log('transferred '+web3.utils.fromWei(i.value)+ 'from '+i.from+' to '+i.to)
+                    console.log('transferred '+ethers.utils.formatEther(i.value)+ 'from '+i.from+' to '+i.to)
                 }
     
                 if(i.input.substring(0,10) == methods[0]){
@@ -38,9 +37,9 @@ then(x=>x.json().then(
                 
                 if(i.input.substring(0,10) == methods[1]){
                     let tokens=parseInt(i.input.slice(10+64, 10+64+64),16);
-                    var contract = new web3.eth.Contract(IERC,i.to)
-                    tokens= tokens/10**(await contract.methods.decimals().call())
-                    let tokensymbol=await contract.methods.symbol().call()
+                    const contract = new ethers.Contract(i.to,IERC,provider)
+                    tokens= tokens/10**(await contract.decimals())
+                    let tokensymbol=await contract.symbol()
     
                     console.log(i.hash,'\ntransfered',tokens,tokensymbol,'\tto=>',i.to,"\n")
                 }
@@ -60,13 +59,13 @@ then(x=>x.json().then(
     
                         let tin,tout;
     
-                        var contract = new web3.eth.Contract(IERC,tokeninAddress)
-                        tokensin= tokensin/10**(await contract.methods.decimals().call())
-                        tin=await contract.methods.symbol().call()
-    
-                        var contract = new web3.eth.Contract(IERC,tokenoutAddress)
-                        tokensout= tokensout/10**(await contract.methods.decimals().call())
-                        tout=await contract.methods.symbol().call()
+                        const contract1 = new ethers.Contract(tokeninAddress,IERC,provider)
+                        tokensin= tokensin/10**(await contract1.decimals())
+                        tin=await contract1.symbol()
+
+                        const contract2 = new ethers.Contract(tokenoutAddress,IERC,provider)
+                        tokensout= tokensout/10**(await contract2.decimals())
+                        tout=await contract2.symbol()
                          
     
                         console.log(i.hash,'\nswapped\t',tokensin,tin,'\t for\t',tokensout,tout);
@@ -79,18 +78,3 @@ then(x=>x.json().then(
 ))
 
 x()
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
